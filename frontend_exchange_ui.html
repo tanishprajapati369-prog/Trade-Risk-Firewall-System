@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en" class="dark h-full bg-slate-950">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Trade Risk Firewall - Delta Exchange</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            delta: {
+              bg: '#0b0e14', card: '#121721', border: '#1e2638',
+              accent: '#0052ff', green: '#00c076', red: '#ff3b69', gold: '#e2b13c'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: #0b0e14; }
+    ::-webkit-scrollbar-thumb { background: #1e2638; border-radius: 2px; }
+  </style>
+</head>
+<body class="bg-[#0b0e14] text-slate-200 h-full flex flex-col antialiased">
+
+  <!-- TOP NAVBAR -->
+  <header class="h-14 border-b border-[#1e2638] bg-[#121721] px-4 flex items-center justify-between shrink-0">
+    <div class="flex items-center space-x-6">
+      <div class="flex items-center space-x-2">
+        <div class="p-1.5 bg-blue-600 rounded-lg text-white font-bold text-lg">
+          <i data-lucide="shield-alert" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <span class="font-extrabold text-base text-white">DELTA</span>
+          <span class="text-xs bg-blue-500/20 text-blue-400 font-semibold px-1.5 py-0.5 rounded ml-1 border border-blue-500/30">FIREWALL AI</span>
+        </div>
+      </div>
+      <nav class="hidden md:flex items-center space-x-1 text-sm font-medium">
+        <button onclick="switchTab('trading')" id="nav-trading" class="px-3 py-1.5 rounded-md text-white bg-blue-600/20 text-blue-400 font-semibold">Trade</button>
+        <button onclick="switchTab('firewall')" id="nav-firewall" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 flex items-center gap-1.5">
+          <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> Firewall Risk Hub
+        </button>
+        <button onclick="switchTab('digital-twin')" id="nav-digital-twin" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-white">Digital Twin</button>
+        <button onclick="switchTab('autopsy')" id="nav-autopsy" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-white">Strategy Autopsy</button>
+      </nav>
+    </div>
+
+    <div id="ticker-bar" class="hidden lg:flex items-center space-x-6 text-xs">
+      <select id="asset-selector" onchange="changeAsset()" class="bg-[#0b0e14] border border-[#1e2638] rounded text-white font-bold px-2 py-1">
+        <option value="BTCUSDT">BTC/USDT</option>
+        <option value="ETHUSDT">ETH/USDT</option>
+        <option value="SOLUSDT">SOL/USDT</option>
+        <option value="EURUSD">EUR/USD</option>
+        <option value="GBPUSD">GBP/USD</option>
+        <option value="USDJPY">USD/JPY</option>
+      </select>
+      <div><span class="text-slate-400 block">Mark Price</span><span id="hdr-price" class="font-mono font-bold text-emerald-400">$64,250.00</span></div>
+      <div><span class="text-slate-400 block">24h Change</span><span id="hdr-change" class="font-mono text-emerald-400">+3.42%</span></div>
+    </div>
+
+    <div class="flex items-center space-x-3 text-sm">
+      <span class="text-xs font-mono text-emerald-400">$50,000.00 USDT</span>
+    </div>
+  </header>
+
+  <!-- MAIN VIEW -->
+  <main class="flex-1 flex overflow-hidden">
+    <!-- TRADING DESK TAB -->
+    <div id="tab-trading" class="flex-1 flex flex-col md:flex-row overflow-hidden">
+      <!-- CHART AREA -->
+      <div class="flex-1 flex flex-col border-r border-[#1e2638]">
+        <div class="h-10 border-b border-[#1e2638] bg-[#121721] px-3 flex items-center justify-between text-xs">
+          <div class="flex items-center space-x-1">
+            <span class="text-slate-400 mr-2">TF:</span>
+            <button onclick="setTf('15m')" class="px-2 py-0.5 rounded bg-slate-800 text-white font-medium">15m</button>
+            <button onclick="setTf('1h')" class="px-2 py-0.5 rounded text-slate-400">1h</button>
+            <button onclick="setTf('1D')" class="px-2 py-0.5 rounded text-slate-400">1D</button>
+          </div>
+          <div class="flex items-center space-x-1 bg-[#0b0e14] px-2 py-0.5 rounded border border-[#1e2638]">
+            <button onclick="zoomIn()" class="p-1 hover:bg-slate-800 text-slate-300" title="Zoom In"><i data-lucide="zoom-in" class="w-3.5 h-3.5"></i></button>
+            <button onclick="zoomOut()" class="p-1 hover:bg-slate-800 text-slate-300" title="Zoom Out"><i data-lucide="zoom-out" class="w-3.5 h-3.5"></i></button>
+            <button onclick="resetZoom()" class="p-1 hover:bg-slate-800 text-slate-300" title="Reset"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
+          </div>
+        </div>
+
+        <div class="flex-1 bg-[#0b0e14] relative">
+          <canvas id="mainChart" class="w-full h-full cursor-crosshair"></canvas>
+          <div class="absolute bottom-2 left-3 text-[10px] text-slate-500 font-mono bg-[#0b0e14]/80 px-1.5 py-0.5 rounded border border-[#1e2638]/50">
+            Scroll wheel to zoom • Click & drag horizontally to pan
+          </div>
+        </div>
+
+        <!-- POSITIONS TABLE -->
+        <div class="h-44 border-t border-[#1e2638] bg-[#121721] flex flex-col">
+          <div class="h-8 border-b border-[#1e2638] px-3 flex items-center text-xs font-semibold text-blue-400">
+            Open Positions (<span id="pos-count">0</span>)
+          </div>
+          <div class="flex-1 overflow-y-auto">
+            <table class="w-full text-left text-xs font-mono">
+              <thead class="bg-[#0b0e14] text-slate-400">
+                <tr>
+                  <th class="p-2">Symbol</th><th class="p-2">Side</th><th class="p-2">Size</th>
+                  <th class="p-2">Entry</th><th class="p-2">Status</th><th class="p-2 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="positions-table-body" class="divide-y divide-[#1e2638]">
+                <tr><td colspan="6" class="p-4 text-center text-slate-500">No open positions. Submit a trade intent.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- EXECUTION & FIREWALL PANEL -->
+      <div class="w-full md:w-80 bg-[#121721] p-4 space-y-4 text-xs overflow-y-auto shrink-0">
+        <div class="font-bold text-white uppercase flex items-center gap-1.5 border-b border-[#1e2638] pb-2">
+          <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i> Trade Intent Entry
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 bg-[#0b0e14] p-1 rounded border border-[#1e2638]">
+          <button id="side-buy" onclick="setSide('LONG')" class="py-1.5 font-bold rounded text-white bg-emerald-600">BUY / LONG</button>
+          <button id="side-sell" onclick="setSide('SHORT')" class="py-1.5 font-bold rounded text-slate-400">SELL / SHORT</button>
+        </div>
+
+        <div>
+          <label class="text-slate-400 block mb-1">LEVERAGE</label>
+          <div class="flex items-center bg-[#0b0e14] border border-[#1e2638] rounded px-2 py-1">
+            <span id="lev-val" class="text-amber-400 font-bold font-mono mr-2">10x</span>
+            <input id="lev-range" type="range" min="1" max="100" value="10" oninput="document.getElementById('lev-val').innerText=this.value+'x'; runFirewallCheck();" class="w-full accent-amber-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-slate-400 block mb-1">ENTRY PRICE ($)</label>
+          <input id="input-price" type="number" value="64250" oninput="runFirewallCheck()" class="w-full bg-[#0b0e14] border border-[#1e2638] rounded px-3 py-1.5 text-white font-mono">
+        </div>
+
+        <div>
+          <label class="text-slate-400 block mb-1">POSITION SIZE (UNITS)</label>
+          <input id="input-qty" type="number" value="1.5" step="0.1" oninput="runFirewallCheck()" class="w-full bg-[#0b0e14] border border-[#1e2638] rounded px-3 py-1.5 text-white font-mono">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-slate-400 block mb-1">STOP LOSS ($)</label>
+            <input id="input-sl" type="number" value="63000" oninput="runFirewallCheck()" class="w-full bg-[#0b0e14] border border-[#1e2638] rounded px-2 py-1.5 text-red-400 font-mono">
+          </div>
+          <div>
+            <label class="text-slate-400 block mb-1">TAKE PROFIT ($)</label>
+            <input id="input-tp" type="number" value="67000" oninput="runFirewallCheck()" class="w-full bg-[#0b0e14] border border-[#1e2638] rounded px-2 py-1.5 text-emerald-400 font-mono">
+          </div>
+        </div>
+
+        <!-- AI FIREWALL CARD -->
+        <div class="bg-[#0b0e14] border border-[#1e2638] rounded-lg p-3 space-y-2">
+          <div class="flex justify-between items-center border-b border-[#1e2638] pb-1.5">
+            <span class="font-bold text-slate-300 flex items-center gap-1"><i data-lucide="cpu" class="w-3.5 h-3.5 text-blue-400"></i> AI Risk Prediction</span>
+            <span id="fw-verdict-badge" class="px-2 py-0.5 rounded font-bold text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PROCEED</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 font-mono text-[11px]">
+            <div class="bg-[#121721] p-2 rounded">
+              <div class="text-slate-400 text-[10px]">Win Forecast</div>
+              <div id="fw-win-rate" class="font-bold text-emerald-400 text-sm">62.4%</div>
+            </div>
+            <div class="bg-[#121721] p-2 rounded">
+              <div class="text-slate-400 text-[10px]">Loss Forecast</div>
+              <div id="fw-loss-rate" class="font-bold text-red-400 text-sm">37.6%</div>
+            </div>
+          </div>
+          <div id="fw-top-factor" class="text-[10px] bg-blue-950/40 border border-blue-900/50 p-2 rounded text-blue-300">
+            Position size matches historical median. No size anomaly detected.
+          </div>
+        </div>
+
+        <button onclick="executeTrade()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow transition">
+          Execute Trade Intent
+        </button>
+      </div>
+    </div>
+
+    <!-- OTHER TABS -->
+    <div id="tab-firewall" class="hidden flex-1 p-6 bg-[#0b0e14] overflow-y-auto">
+      <h1 class="text-xl font-bold text-white mb-2">Trade Risk Firewall Hub</h1>
+      <p class="text-xs text-slate-400">Pre-trade risk assessment and digital twin behavioral filtering engine.</p>
+    </div>
+    <div id="tab-digital-twin" class="hidden flex-1 p-6 bg-[#0b0e14] overflow-y-auto">
+      <h1 class="text-xl font-bold text-white mb-2">Personal Trading Digital Twin</h1>
+      <p class="text-xs text-slate-400">Derived profile tracking historical win rate and position sizing.</p>
+    </div>
+    <div id="tab-autopsy" class="hidden flex-1 p-6 bg-[#0b0e14] overflow-y-auto">
+      <h1 class="text-xl font-bold text-white mb-2">Strategy Autopsy & Cost Engine</h1>
+      <p class="text-xs text-slate-400">Indian Market cost impact calculator (STT, GST, Brokerage, Slippage).</p>
+    </div>
+  </main>
+
+  <script>
+    lucide.createIcons();
+    let currentAsset = "BTCUSDT";
+    let currentSide = "LONG";
+    let positions = [];
+    let chartCandles = [];
+    let zoomLevel = 1.0, panOffset = 0, isDragging = false, dragStartX = 0;
+
+    const marketData = {
+      BTCUSDT: { price: 64250.00, change: 3.42 },
+      ETHUSDT: { price: 3450.50, change: -1.25 },
+      SOLUSDT: { price: 145.20, change: 5.60 },
+      EURUSD: { price: 1.0850, change: 0.15 },
+      GBPUSD: { price: 1.2640, change: -0.30 },
+      USDJPY: { price: 155.40, change: 0.45 }
+    };
+
+    const canvas = document.getElementById('mainChart');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      if (!canvas.parentElement) return;
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+      drawChart();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    function generateCandles() {
+      chartCandles = [];
+      let base = marketData[currentAsset].price;
+      let curr = base * 0.95;
+      for (let i = 0; i < 80; i++) {
+        let open = curr;
+        let close = open + (Math.random() - 0.48) * (base * 0.015);
+        let high = Math.max(open, close) + Math.random() * (base * 0.008);
+        let low = Math.min(open, close) - Math.random() * (base * 0.008);
+        chartCandles.push({ open, high, low, close });
+        curr = close;
+      }
+      chartCandles[chartCandles.length - 1].close = base;
+    }
+
+    function drawChart() {
+      if (!ctx || canvas.width === 0) return;
+      const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const candleWidth = Math.max(2, 10 * zoomLevel);
+      const visibleCount = Math.floor(w / (candleWidth + 3));
+      let endIndex = Math.min(chartCandles.length, Math.max(visibleCount, chartCandles.length - Math.floor(panOffset)));
+      let startIndex = Math.max(0, endIndex - visibleCount);
+      const visible = chartCandles.slice(startIndex, endIndex);
+
+      if (visible.length === 0) return;
+
+      let min = Math.min(...visible.map(c => c.low));
+      let max = Math.max(...visible.map(c => c.high));
+      let range = (max - min) || 1;
+
+      visible.forEach((c, idx) => {
+        const x = idx * (candleWidth + 3) + 10;
+        const getY = (p) => h - 20 - ((p - min) / range) * (h - 40);
+        const color = c.close >= c.open ? '#00c076' : '#ff3b69';
+
+        ctx.strokeStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x + candleWidth / 2, getY(c.high));
+        ctx.lineTo(x + candleWidth / 2, getY(c.low));
+        ctx.stroke();
+
+        ctx.fillStyle = color;
+        const openY = getY(c.open), closeY = getY(c.close);
+        ctx.fillRect(x, Math.min(openY, closeY), candleWidth, Math.max(2, Math.abs(closeY - openY)));
+      });
+    }
+
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      zoomLevel = e.deltaY < 0 ? Math.min(3.5, zoomLevel * 1.15) : Math.max(0.4, zoomLevel / 1.15);
+      drawChart();
+    });
+
+    canvas.addEventListener('mousedown', (e) => { isDragging = true; dragStartX = e.clientX; });
+    window.addEventListener('mouseup', () => { isDragging = false; });
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      panOffset += (e.clientX - dragStartX) / (10 * zoomLevel);
+      dragStartX = e.clientX;
+      drawChart();
+    });
+
+    function zoomIn() { zoomLevel = Math.min(3.5, zoomLevel * 1.15); drawChart(); }
+    function zoomOut() { zoomLevel = Math.max(0.4, zoomLevel / 1.15); drawChart(); }
+    function resetZoom() { zoomLevel = 1.0; panOffset = 0; drawChart(); }
+
+    function runFirewallCheck() {
+      const price = parseFloat(document.getElementById('input-price').value) || marketData[currentAsset].price;
+      const qty = parseFloat(document.getElementById('input-qty').value) || 1.0;
+      const lev = parseInt(document.getElementById('lev-range').value);
+
+      let winProb = 62.0;
+      let factor = "Position size matches historical median. No size anomaly detected.";
+
+      if (qty > 3.0) { winProb -= 16.0; factor = `Oversized position (${qty} units) vs Digital Twin median.`; }
+      if (lev > 25) { winProb -= 14.0; factor = `Excessive leverage (${lev}x) increases risk.`; }
+
+      winProb = Math.min(88, Math.max(18, winProb));
+      document.getElementById('fw-win-rate').innerText = winProb.toFixed(1) + "%";
+      document.getElementById('fw-loss-rate').innerText = (100 - winProb).toFixed(1) + "%";
+      document.getElementById('fw-top-factor').innerText = factor;
+
+      const badge = document.getElementById('fw-verdict-badge');
+      if (winProb >= 52) { badge.innerText = "PROCEED"; badge.className = "px-2 py-0.5 rounded font-bold text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"; }
+      else if (winProb >= 38) { badge.innerText = "REVIEW"; badge.className = "px-2 py-0.5 rounded font-bold text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30"; }
+      else { badge.innerText = "HIGH RISK"; badge.className = "px-2 py-0.5 rounded font-bold text-[10px] bg-red-500/20 text-red-400 border border-red-500/30"; }
+    }
+
+    function executeTrade() {
+      const price = parseFloat(document.getElementById('input-price').value);
+      const qty = parseFloat(document.getElementById('input-qty').value);
+      positions.push({ id: Date.now(), symbol: currentAsset, side: currentSide, qty, entryPrice: price });
+      renderPositions();
+    }
+
+    function renderPositions() {
+      document.getElementById('pos-count').innerText = positions.length;
+      const tbody = document.getElementById('positions-table-body');
+      if (positions.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-500">No open positions. Submit a trade intent.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = positions.map(p => `
+        <tr>
+          <td class="p-2 font-bold text-white">${p.symbol}</td>
+          <td class="p-2 font-bold ${p.side === 'LONG' ? 'text-emerald-400' : 'text-red-400'}">${p.side}</td>
+          <td class="p-2 text-slate-200">${p.qty}</td>
+          <td class="p-2 text-slate-200">$${p.entryPrice.toFixed(2)}</td>
+          <td class="p-2"><span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-400">MONITORED</span></td>
+          <td class="p-2 text-right"><button onclick="closePosition(${p.id})" class="px-2 py-0.5 bg-red-600/20 text-red-400 hover:text-white rounded text-[10px]">Close</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function closePosition(id) { positions = positions.filter(p => p.id !== id); renderPositions(); }
+    function switchTab(t) {
+      ['trading', 'firewall', 'digital-twin', 'autopsy'].forEach(id => document.getElementById(`tab-${id}`).classList.add('hidden'));
+      document.getElementById(`tab-${t}`).classList.remove('hidden');
+      if (t === 'trading') setTimeout(resizeCanvas, 50);
+    }
+    function setSide(s) {
+      currentSide = s;
+      document.getElementById('side-buy').className = s === 'LONG' ? 'py-1.5 font-bold rounded text-white bg-emerald-600' : 'py-1.5 font-bold rounded text-slate-400';
+      document.getElementById('side-sell').className = s === 'SHORT' ? 'py-1.5 font-bold rounded text-white bg-red-600' : 'py-1.5 font-bold rounded text-slate-400';
+      runFirewallCheck();
+    }
+    function changeAsset() {
+      currentAsset = document.getElementById('asset-selector').value;
+      const d = marketData[currentAsset];
+      document.getElementById('hdr-price').innerText = "$" + d.price.toFixed(2);
+      document.getElementById('input-price').value = d.price;
+      generateCandles(); resetZoom(); runFirewallCheck();
+    }
+    function setTf() { generateCandles(); drawChart(); }
+
+    window.onload = () => { generateCandles(); setTimeout(resizeCanvas, 100); runFirewallCheck(); };
+  </script>
+</body>
+</html>
